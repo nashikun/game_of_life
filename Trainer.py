@@ -7,18 +7,24 @@ import pickle
 
 class Trainer:
     def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5):
+        # Parameters for the Q learning
         self.epsilon = epsilon
         self.gamma = gamma
         self.alpha = alpha
-        self.scores = []
+        # Holds the Q matrix
         self.Q = defaultdict(float)
+        # Holds the scores of each played game        
+        self.scores = []
+
+
 
     def load_model(self, path):
         with open(path, 'rb') as handle:
             self.Q = pickle.load(handle)
 
     def save_model(self, path):
-        pass
+        with open(path, 'wb') as handle:
+            pickle.dump(self.Q, handle)
         
     def train(self, show = True, print_scores = True, n_generations = 100):
         self.n_generations = n_generations
@@ -26,6 +32,7 @@ class Trainer:
             game = Game(show = show, max_value=30)
             game.add_player(0)
             game.players[0].set_agent(Agent(self.Q, len(game.moves.items()), self.epsilon, self.alpha, self.gamma))
+            game.players[0].age = 20
             score = game.run()
             self.updateEpsilon()
             if print_scores:
@@ -46,6 +53,6 @@ class Trainer:
         plt.waitforbuttonpress()
 
 if __name__ == "__main__":
-    trainer = Trainer(epsilon=0)
+    trainer = Trainer(epsilon=1)
     trainer.load_model("Q_matrix")
     trainer.train(show=True, print_scores=False, n_generations=1)
