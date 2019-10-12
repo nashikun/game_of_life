@@ -5,9 +5,11 @@ from tkinter import *
 
 class Player:
     """ The class for players"""
-    def __init__(self, game, id = 0):
+    def __init__(self, game, id = 0, parent = None):
         # The player's id
         self.id = id
+        # Sets the player's parent
+        self.parent = parent
         # The player's hunger. They die if it reaches the maximum
         self.hunger = 0
         # The amount of food available for player to eat
@@ -52,6 +54,11 @@ class Player:
         self.food_label = Label(textvariable=self.food_text)
         self.food_label.pack()
 
+        # Time till birth
+        self.birth_text = StringVar()
+        self.birth_label = Label(textvariable=self.birth_text)
+        self.birth_label.pack()
+
     def draw(self):
         """ Draw the player's attributes on the canvas"""
         self.canvas.coords(self.hunger_bar, 150 * self.id + 50, 50, 150 * self.id + 50 + 100 * self.hunger / self.max_value, 100)
@@ -59,29 +66,52 @@ class Player:
         self.hunger_text.set("Hunger: %s / %s "%(self.hunger, self.max_value))
         self.stamina_text.set("Stamina: %s / %s "%(self.stamina, self.max_value))
         self.food_text.set("Remaining food: %s"%self.food)
+        preg = bool(self.until_birth)
+        self.birth_text.set("Is " + "not" * (not preg) + " pregnant." + preg * (" Time till giving birth: %s"%self.until_birth))
 
     def next_turn(self, action):
         """ Return the next state of player if he did the action in this turn """
         if action == 0: # Rest
-            stamina = min(self.stamina + 3, self.max_value)
-            hunger = min(1 + self.hunger, self.max_value)
-            food = self.food
-            until_birth = self.until_birth
+            if self.until_birth:
+                stamina = min(self.stamina + 2, self.max_value)
+                hunger = min(2 + self.hunger, self.max_value)
+                food = self.food
+                until_birth = max(self.until_birth - 1, 0)
+            else:
+                stamina = min(self.stamina + 4, self.max_value)
+                hunger = min(1 + self.hunger, self.max_value)
+                food = self.food
+                until_birth = max(self.until_birth - 1, 0)
         elif action == 1 : #Eat
-            until_birth = self.until_birth
-            stamina = self.stamina
-            hunger = max(self.hunger - 3, 0)
-            food = max(self.food - 1, 0)
+            if self.until_birth:
+                stamina = self.stamina
+                hunger = max(self.hunger - 3, 0)
+                food = max(self.food - 2, 0)
+                until_birth = max(self.until_birth - 1, 0)
+            else:
+                stamina = self.stamina
+                hunger = max(self.hunger - 3, 0)
+                food = max(self.food - 1, 0)
+                until_birth = max(self.until_birth - 1, 0)
         elif action == 2 : # Hunt
-            food = self.food + 2
-            hunger = self.hunger + 2
-            stamina = self.stamina - 2
-            until_birth = self.until_birth
+            if self.until_birth:
+                food = self.food + 2
+                hunger = self.hunger + 3
+                stamina = self.stamina - 4
+                until_birth = max(self.until_birth - 1, 0)
+            else:
+                food = self.food + 2
+                hunger = self.hunger + 2
+                stamina = self.stamina - 2
+                until_birth = max(self.until_birth - 1, 0)
         elif action == 3: # Reproduce
-            stamina = self.stamina
-            hunger = self.hunger + 2
-            food = self.food
-            until_birth = 10
+            if self.until_birth:
+                raise Exception("Unallowed action")
+            else: 
+                stamina = self.stamina
+                hunger = self.hunger + 2
+                food = self.food
+                until_birth = 10
         return stamina, hunger, food, until_birth, 
 
     def play_turn(self):
@@ -91,6 +121,9 @@ class Player:
             allowed_actions = self.allowed_actions()
             # The current state
             state = (self.stamina, self.hunger, self.food, self.until_birth)
+            # If the until_birth counter reached 1, give birth
+            if self.until_birth == 1:
+                self.game.add_new_born(self)
             # The best expected action
             action = self.agent.act(state, allowed_actions)
             # Do the action
@@ -102,11 +135,10 @@ class Player:
             self.stamina, self.hunger, self.food, self.until_birth = next_state
             self.age += 1
             self.reward += reward
-            # If the until_birth counter reached 1, give birth
 
     def is_dead(self):
         """ Return True if the player is dead and False otherwise"""
-        return self.stamina <= 0 or self.hunger >= self.max_value or self.age >= 1000
+        return self.stamina <= 0 or self.hunger >= self.max_value or self.age >= 100
 
     def allowed_actions(self):
         """ Returns the list of allowed moves the user can do """
@@ -115,6 +147,6 @@ class Player:
             allowed.append(1)
         if self.age > 20:
             allowed.append(2)
-            # if not self.until_birth :
-            #     allowed.append(3)
+            if not self.until_birth :
+                allowed.append(3)
         return allowed

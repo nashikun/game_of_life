@@ -1,4 +1,5 @@
 from Player import Player
+from Agent import Agent
 import time
 from tkinter import Tk, Canvas
 import pickle
@@ -17,18 +18,30 @@ class Game:
         # Defining the canvas
         if self.show:
             self.animation = Tk()
-            self.canvas = Canvas(self.animation, width = 400, height = 300)
+            self.canvas = Canvas(self.animation, width = 2000, height = 300)
             self.canvas.pack()
         else:
             self.canvas = None
         self.players = {}
+        self.new_borns = {}
 
-    def add_player(self, id=0):
+    def add_player(self, id=None):
         """ Adds a player to the game with the corresponding id. No 2 players can have the same id"""
-        player = Player(self, id=id)
-        if id in self.players.keys():
-            raise Exception(('Id already exists'))
-        self.players[id] = player
+        if id:
+            if id in self.players.keys():
+                raise Exception(('Id already exists'))
+            self.players[id] = Player(self, id=id)
+        else:
+            new_id = max(self.players.keys(), default = -1) + 1
+            self.players[new_id] = Player(self, id=new_id)
+    
+    def add_new_born(self, parent):
+        """ Adds a player to the game with the corresponding id. No 2 players can have the same id"""
+        keys = set(self.players.keys()) | set(self.new_borns.keys())
+        new_id = max(keys, default = -1) + 1
+        player = Player(self, id = new_id, parent = parent)
+        player.set_agent(parent.agent.inherit())
+        self.new_borns[new_id] = player
 
     def run(self):
         """ Runs the game """
@@ -38,6 +51,8 @@ class Game:
             # Each player plays his turn
             for player in self.players.values():
                 player.play_turn()
+            self.players = {**self.players, **self.new_borns}
+            self.new_borns = {}
             # Draw the canvas if needed
             if self.show:
                 self.draw()

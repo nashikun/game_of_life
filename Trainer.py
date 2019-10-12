@@ -31,7 +31,7 @@ class Trainer:
         for i in range(n_generations):
             game = Game(show = show, max_value=30)
             game.add_player(0)
-            game.players[0].set_agent(Agent(self.Q, len(game.moves.items()), self.epsilon, self.alpha, self.gamma))
+            game.players[0].set_agent(Agent(self.Q, self.epsilon, self.alpha, self.gamma))
             game.players[0].age = 20
             score = game.run()
             self.updateEpsilon()
@@ -53,6 +53,8 @@ class Trainer:
         plt.waitforbuttonpress()
 
 if __name__ == "__main__":
-    trainer = Trainer(epsilon=1)
-    trainer.load_model("Q_matrix")
-    trainer.train(show=True, print_scores=False, n_generations=1)
+    trainer = Trainer(epsilon=0.5)
+    trainer.load_model("Q_matrix_preg")
+    trainer.train(show=True, print_scores=True, n_generations=1)
+    #trainer.plot_scores(5)
+    #trainer.save_model("Q_matrix_preg")

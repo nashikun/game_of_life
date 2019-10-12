@@ -2,7 +2,7 @@ import numpy as np
 
 class Agent:
     """ The Class responsible for making decisions """
-    def __init__(self, Q, n_moves, epsilon, alpha, gamma):
+    def __init__(self, Q, epsilon, alpha, gamma):
         # Parameters for the Q learning
         self.Q = Q
         self.epsilon = epsilon
@@ -25,4 +25,5 @@ class Agent:
         max_next_q = max(self.Q[next_state, a] for a in allowed_actions)
         self.Q[state, action] += self.alpha * (reward + self.gamma * max_next_q * (1 - done) - self.Q[state, action])
 
-    
+    def inherit(self):
+        return Agent(self.Q, self.epsilon, self.alpha, self.gamma)
