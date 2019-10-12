@@ -1,30 +1,34 @@
 import time
 from tkinter import *
-from Agent import Agent
+
+# TODO: if player is pregnant, stamina is reduced and hunger is higher, so they need to stockpile first!
 
 class Player:
-    def __init__(self, game, id = 0, max_value = 100):
+    def __init__(self, game, id = 0):
         self.id = id
-        self.game = game
-        self.agent = Agent(game, 0.1, 0.5, 0.9)
-        self.canvas = game.canvas
         self.hunger = 0
         self.food = 0
-        self.stamina = max_value
-        self.max_value = max_value
+        self.stamina = game.max_value
+        self.max_value = game.max_value
+        self.canvas = game.canvas
+        self.age = 0
+        self.game = game
         self.reward = 0
         if self.canvas:
-         self.set_canvas()
+            self.set_canvas()
+
+    def set_agent(self, agent):
+        self.agent = agent
 
     def set_canvas(self):
         # Hunger meter
-        self.hunger_bar = self.canvas.create_rectangle(50, 50, 50, 100, fill='red')
+        self.hunger_bar = self.canvas.create_rectangle( 150 * self.id + 50, 50, 150 * self.id + 50, 100, fill='red')
         self.hunger_text = StringVar()
         self.hunger_label = Label(textvariable=self.hunger_text)
         self.hunger_label.pack()
 
         # Stamina meter
-        self.stamina_bar = self.canvas.create_rectangle(50, 150, 250, 200, fill='red')
+        self.stamina_bar = self.canvas.create_rectangle(150 * self.id + 50, 150, 150 * self.id + 250, 200, fill='red')
         self.stamina_text = StringVar()
         self.stamina_label = Label(textvariable=self.stamina_text)
         self.stamina_label.pack()
@@ -35,8 +39,8 @@ class Player:
         self.food_label.pack()
 
     def draw(self):
-        self.canvas.coords(self.hunger_bar, 50, 50, 50 + 2 *self.hunger, 100)
-        self.canvas.coords(self.stamina_bar, 50, 150, 50 + 2 * self.stamina, 200)
+        self.canvas.coords(self.hunger_bar, 150 * self.id + 50, 50, 150 * self.id + 50 + 100 * self.hunger / self.max_value, 100)
+        self.canvas.coords(self.stamina_bar, 150 * self.id + 50, 150, 150 * self.id + 50 + 100 * self.stamina / self.max_value, 200)
         self.hunger_text.set("Hunger: %s / %s "%(self.hunger, self.max_value))
         self.stamina_text.set("Stamina: %s / %s "%(self.stamina, self.max_value))
         self.food_text.set("Remaining food: %s"%self.food)
@@ -62,14 +66,16 @@ class Player:
         return stamina, hunger, food
 
     def play_turn(self):
-        state = (self.stamina, self.hunger, self.food)
-        action = self.agent.act(state)
-        next_state = self.next_turn(action)
-        done = self.game.is_over()
-        reward = self.game.reward(next_state)
-        self.stamina, self.hunger, self.food = next_state
-        self.agent.updateQ(state, reward, action, next_state, done)
-        self.reward += reward
+        if not self.is_dead():
+            state = (self.stamina, self.hunger, self.food)
+            action = self.agent.act(state)
+            next_state = self.next_turn(action)
+            done = self.game.is_over()
+            reward = self.game.reward(next_state)
+            self.stamina, self.hunger, self.food = next_state
+            self.age += 1
+            self.agent.updateQ(state, reward, action, next_state, done)
+            self.reward += reward
 
     def is_dead(self):
-        return self.stamina <= 0 or self.hunger >= self.max_value
+        return self.stamina <= 0 or self.hunger >= self.max_value or self.age >= 1000
