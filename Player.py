@@ -2,14 +2,16 @@ import time
 from tkinter import *
 
 # TODO: if player is pregnant, stamina is reduced and hunger is higher, so they need to stockpile first!
+# TODO : Deque for food to add 'spoiling' 
 
 class Player:
     """ The class for players"""
     def __init__(self, game, id = 0, parent = None):
         # The player's id
         self.id = id
-        # Sets the player's parent
+        # Sets the player's parent and children
         self.parent = parent
+        self.children = []
         # The player's hunger. They die if it reaches the maximum
         self.hunger = 0
         # The amount of food available for player to eat
@@ -31,12 +33,13 @@ class Player:
         if game.canvas:
             self.set_canvas()
 
-    """ Sets an appropriate agent for the player"""
     def set_agent(self, agent):
+        """ Sets an appropriate agent for the player"""
         self.agent = agent
 
-    """ Set up the canvas with the appropriate items""" 
     def set_canvas(self):
+        """ Set up the canvas with the appropriate items""" 
+
         # Hunger meter
         self.hunger_bar = self.canvas.create_rectangle( 150 * self.id + 50, 50, 150 * self.id + 50, 100, fill='red')
         self.hunger_text = StringVar()
@@ -112,18 +115,21 @@ class Player:
                 hunger = self.hunger + 2
                 food = self.food
                 until_birth = 10
-        return stamina, hunger, food, until_birth, 
+        n_children = self.n_children
+        return stamina, hunger, food, until_birth
 
     def play_turn(self):
         """ Plays 1 turn for the player and updates his status accordingly"""
         if not self.is_dead():
-            #The allowed actions:
+            # The allowed actions:
             allowed_actions = self.allowed_actions()
-            # The current state
-            state = (self.stamina, self.hunger, self.food, self.until_birth)
-            # If the until_birth counter reached 1, give birth
+            # The number of alive children
+            n_children = self.n_children()
+            # If birth is due this turn, give birth
             if self.until_birth == 1:
                 self.game.add_new_born(self)
+            # The current state
+            state = [self.stamina, self.hunger, self.food, self.until_birth]
             # The best expected action
             action = self.agent.act(state, allowed_actions)
             # Do the action
@@ -131,7 +137,7 @@ class Player:
             done = self.game.is_over()
             reward = self.game.reward(next_state)
             # Update the game state
-            self.agent.updateQ(state, reward, action, next_state, done, allowed_actions)
+            self.agent.remember(state, reward, action, next_state, done)
             self.stamina, self.hunger, self.food, self.until_birth = next_state
             self.age += 1
             self.reward += reward
@@ -147,6 +153,10 @@ class Player:
             allowed.append(1)
         if self.age > 20:
             allowed.append(2)
-            if not self.until_birth :
-                allowed.append(3)
+            # if not self.until_birth :
+            #     allowed.append(3)
         return allowed
+
+    def n_children(self):
+        return len([child for child in self.children if not child.is_dead()])
+        

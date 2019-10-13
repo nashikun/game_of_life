@@ -4,34 +4,50 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+import os.path
+import keras.models
+from keras.layers.core import Dense
+from keras.models import Sequential
+from keras.optimizers import Adam
+
+# The possible actions
+moves = {0 : 'rest', 1 : 'eat', 2 : 'hunt', 3 : 'reproduce'}
+states = {0 : 'stamina', 1 : 'hunger', 2 : 'food', 3 : 'until_birth'}
+n_moves = len(moves.keys())
+n_states = len(states.keys())
 
 class Trainer:
-    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5):
+    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.1):
         # Parameters for the Q learning
         self.epsilon = epsilon
         self.gamma = gamma
         self.alpha = alpha
-        # Holds the Q matrix
-        self.Q = defaultdict(float)
+        self.learning_rate = learning_rate
+        self.model = self.build_model()
         # Holds the scores of each played game        
         self.scores = []
 
+    def build_model(self):
+        model = Sequential()
+        model.add(Dense(64, input_shape=(n_moves,), activation='relu'))
+        model.add(Dense(16, input_shape=(64,), activation='relu'))
+        model.add(Dense(n_states, input_shape=(16,), activation="softmax"))
+        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
+        return model
 
+    def load_model(self, filename):
+        if os.path.isfile(filename):
+            self.model = keras.models.load_model(filename)
 
-    def load_model(self, path):
-        with open(path, 'rb') as handle:
-            self.Q = pickle.load(handle)
-
-    def save_model(self, path):
-        with open(path, 'wb') as handle:
-            pickle.dump(self.Q, handle)
+    def save_model(self, filename):
+        self.model.save(filename)
         
     def train(self, show = True, print_scores = True, n_generations = 100):
         self.n_generations = n_generations
         for i in range(n_generations):
-            game = Game(show = show, max_value=30)
+            game = Game(show = show, max_value=30, batch_size=64)
             game.add_player(0)
-            game.players[0].set_agent(Agent(self.Q, self.epsilon, self.alpha, self.gamma))
+            game.players[0].set_agent(Agent(self.model, self.epsilon, self.alpha, self.gamma, self.learning_rate))
             game.players[0].age = 20
             score = game.run()
             self.updateEpsilon()
@@ -52,9 +68,18 @@ class Trainer:
         plt.plot(range(n_points), means)
         plt.waitforbuttonpress()
 
-if __name__ == "__main__":
-    trainer = Trainer(epsilon=0.5)
-    trainer.load_model("Q_matrix_preg")
+def run_demo(path):
+    trainer = Trainer(epsilon=0)
+    trainer.load_model(path)
     trainer.train(show=True, print_scores=True, n_generations=1)
-    #trainer.plot_scores(5)
-    #trainer.save_model("Q_matrix_preg")
+
+def train_model(path, n_generations=1000, window=50):
+    trainer = Trainer(epsilon=1)
+    trainer.load_model(path)
+    trainer.train(show=False, print_scores=False, n_generations=n_generations)
+    trainer.plot_scores(window)
+    trainer.save_model(path)
+
+if __name__ == "__main__":
+    run_demo("1")
+    # train_model("1")
