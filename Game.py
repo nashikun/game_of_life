@@ -36,7 +36,7 @@ class Game:
             self.players[new_id] = Player(self, id=new_id)
     
     def add_new_born(self, parent):
-        """ Adds a player As some player's child"""
+        """ Adds a player as some player's child"""
         # The list of all used ids
         keys = set(self.players.keys()) | set(self.new_borns.keys())
         new_id = max(keys, default = -1) + 1
@@ -71,10 +71,11 @@ class Game:
     def reward(self, state):
         """ Returns the corresponding reward for a state"""
         stamina, hunger, food, _ , n_children = state
-        score = stamina * (food + 4 * (self.max_value - hunger))
-        if n_children : 
-           score *= 1.5
-        return score
+        return min(self.max_value / 2 - hunger, stamina - self.max_value / 2)
+        # score = stamina * (food + 4 * (self.max_value - hunger))
+        # if n_children : 
+        #    score *= 1.5
+        # return score
 
     def draw(self):
         """ Draw the appropriate elements for each player """

@@ -39,15 +39,12 @@ class Agent:
         return Agent(self.model, self.epsilon, self.alpha, self.gamma, self.learning_rate)
 
     def replay(self, batch_size):
-        size = len(self.memory)
-        for i in range(int(np.ceil(size / batch_size))):
-            temp_model = clone_model(self.model)
-            for state, action, reward, next_state, done, allowed_actions in \
-                self.memory[i * batch_size: min((i + 1) * batch_size, size)]:
-                      
-                target = reward
-                if not done:
-                    target = reward + (1 - done) *  self.gamma * np.amax(np.take(temp_model.predict(next_state)[0], allowed_actions))
-                target_f = temp_model.predict(state)
-                target_f[0][action] = target
-                self.model.fit(state, target_f, epochs=1, verbose=0)
+        # size = len(self.memory)
+        # for i in range(int(np.ceil(size / batch_size))):
+        #     temp_model = clone_model(self.model)
+        for state, action, reward, next_state, done, allowed_actions in self.memory:
+                # self.memory[i * batch_size: min((i + 1) * batch_size, size)]:
+            target = reward + (1 - done) *  self.gamma * np.amax(np.take(self.model.predict(next_state)[0], allowed_actions))
+            target_f = self.model.predict(state)
+            target_f[0][action] = target
+            self.model.fit(state, target_f, epochs=1, verbose=0)

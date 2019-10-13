@@ -1,9 +1,7 @@
 from Game import Game
 from Agent import Agent
-from collections import defaultdict
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
 import os.path
 import keras.models
 from keras.layers import Dense, LSTM
@@ -17,7 +15,7 @@ n_moves = len(moves.keys())
 n_states = len(states.keys())
 
 class Trainer:
-    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.01):
+    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.0001):
         # Parameters for the Q learning
         self.epsilon = epsilon
         self.gamma = gamma
@@ -31,6 +29,7 @@ class Trainer:
         model = Sequential()
         # model.add(LSTM(units = 16, batch_input_shape=(1, 1, n_states) ,stateful=True))
         model.add(Dense(64, input_shape = (n_states,), activation='relu', kernel_initializer='random_uniform'))
+        model.add(Dense(32, activation='relu', kernel_initializer='random_uniform'))
         model.add(Dense(16, activation='relu', kernel_initializer='random_uniform'))
         model.add(Dense(n_moves, kernel_initializer='random_uniform'))
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
@@ -75,13 +74,14 @@ def run_demo(path):
     trainer.load_model(path)
     trainer.train(show=True, print_scores=True, n_generations=1)
 
-def train_model(path, n_generations=1000, window=50):
+def train_model(path, n_generations=1000, window=50, read = True):
     trainer = Trainer(epsilon=1)
-    trainer.load_model(path)
+    if read:
+        trainer.load_model(path)
     trainer.train(show=False, print_scores=False, n_generations=n_generations)
     trainer.plot_scores(window)
     trainer.save_model(path)
 
 if __name__ == "__main__":
     #run_demo("3")
-    train_model("3")
+    train_model("3", read = False)
