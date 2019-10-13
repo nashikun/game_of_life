@@ -10,9 +10,9 @@ from keras.optimizers import Adam
 
 # The possible actions
 moves = {0 : 'rest', 1 : 'eat', 2 : 'hunt', 3 : 'reproduce'}
-states = {0 : 'stamina', 1 : 'hunger', 2 : 'food', 3 : 'until_birth', 4 : 'n_children'}
+stats = {0 : 'stamina', 1 : 'hunger', 2 : 'food', 3 : 'until_birth', 4 : 'n_children'}
 n_moves = len(moves.keys())
-n_states = len(states.keys())
+n_stats = len(stats.keys())
 
 class Trainer:
     def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.0001):
@@ -28,7 +28,7 @@ class Trainer:
     def build_model(self):
         model = Sequential()
         # model.add(LSTM(units = 16, batch_input_shape=(1, 1, n_states) ,stateful=True))
-        model.add(Dense(64, input_shape = (n_states,), activation='relu', kernel_initializer='random_uniform'))
+        model.add(Dense(64, input_shape = (n_stats,), activation='relu', kernel_initializer='random_uniform'))
         model.add(Dense(32, activation='relu', kernel_initializer='random_uniform'))
         model.add(Dense(16, activation='relu', kernel_initializer='random_uniform'))
         model.add(Dense(n_moves, kernel_initializer='random_uniform'))
