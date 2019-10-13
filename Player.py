@@ -99,13 +99,13 @@ class Player:
         elif action == 2 : # Hunt
             if self.until_birth:
                 food = self.food + 2
-                hunger = self.hunger + 3
-                stamina = self.stamina - 4
+                hunger = min(self.hunger + 3, self.max_value)
+                stamina = max(self.stamina - 4, 0)
                 until_birth = max(self.until_birth - 1, 0)
             else:
                 food = self.food + 2
-                hunger = self.hunger + 2
-                stamina = self.stamina - 2
+                hunger = min(self.hunger + 2, self.max_value)
+                stamina = max(self.stamina - 2, 0)
                 until_birth = max(self.until_birth - 1, 0)
         elif action == 3: # Reproduce
             if self.until_birth:
@@ -115,8 +115,10 @@ class Player:
                 hunger = self.hunger + 2
                 food = self.food
                 until_birth = 10
-        n_children = self.n_children
-        return stamina, hunger, food, until_birth
+        n_children = self.n_children()
+        if self.until_birth == 1:
+            n_children += 1
+        return stamina, hunger, food, until_birth, n_children
 
     def play_turn(self):
         """ Plays 1 turn for the player and updates his status accordingly"""
@@ -129,7 +131,7 @@ class Player:
             if self.until_birth == 1:
                 self.game.add_new_born(self)
             # The current state
-            state = [self.stamina, self.hunger, self.food, self.until_birth]
+            state = [self.stamina, self.hunger, self.food, self.until_birth, n_children]
             # The best expected action
             action = self.agent.act(state, allowed_actions)
             # Do the action
@@ -137,8 +139,8 @@ class Player:
             done = self.game.is_over()
             reward = self.game.reward(next_state)
             # Update the game state
-            self.agent.remember(state, reward, action, next_state, done)
-            self.stamina, self.hunger, self.food, self.until_birth = next_state
+            self.agent.remember(state, reward, action, next_state, done, allowed_actions)
+            self.stamina, self.hunger, self.food, self.until_birth, _ = next_state
             self.age += 1
             self.reward += reward
 
@@ -151,8 +153,8 @@ class Player:
         allowed = [0]
         if self.food : 
             allowed.append(1)
-        if self.age > 20:
-            allowed.append(2)
+        #if self.age > 20:
+        allowed.append(2)
             # if not self.until_birth :
             #     allowed.append(3)
         return allowed

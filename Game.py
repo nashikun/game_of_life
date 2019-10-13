@@ -6,14 +6,14 @@ import pickle
 
 class Game:
     """ This class contains a single game, the players and resources"""
-    def __init__(self, show= True, max_value = 100, batch_size = 64):
+    def __init__(self, show= True, max_value = 100, batch_size = 32):
         # Number of turns since the start of the game
         self.count = 0
         # Whether to show the canvas
         self.show = show
         # Max health and stamina value
         self.max_value = max_value
-        #
+        # The batch size for training the model
         self.batch_size = batch_size
         # Defining the canvas
         if self.show:
@@ -62,18 +62,18 @@ class Game:
                 self.draw()
                 time.sleep(0.1)
         for player in self.players.values():
-            player.agent.replay(batch_size=self.batch_size)
+            player.agent.replay(self.batch_size)
         if self.show:
             self.animation.destroy()
         # The total score is the sum of the rewards for all players
-        return sum([player.reward for player in self.players.values()])
+        return self.player(0).reward #sum([player.reward for player in self.players.values()])
 
     def reward(self, state):
         """ Returns the corresponding reward for a state"""
-        stamina, hunger, food, _ = state
+        stamina, hunger, food, _ , n_children = state
         score = stamina * (food + 4 * (self.max_value - hunger))
-        #if n_children : 
-         #   score *= 1.5
+        if n_children : 
+           score *= 1.5
         return score
 
     def draw(self):

@@ -1,6 +1,7 @@
 import numpy as np
 import random
 from collections import deque
+from keras.models import clone_model
 
 
 class Agent:
@@ -15,39 +16,38 @@ class Agent:
         # The number of turns since the start of the game
         self.count = 0
         # Remembers the previous actions and results 
-        self.memory = deque(maxlen=1000)
+        self.memory = [] #deque(maxlen=1000)
 
     """ Returns the action with the highest expected reward """
     def act(self, state, allowed_actions):
         if np.random.random() < self.epsilon:
             return np.random.choice(allowed_actions)
         state = np.reshape(state, [1, len(state)])       
-        probas = self.model.predict(state)
-        max_proba = max(np.take(probas[0], allowed_actions))
-        max_q_actions = [a for a in allowed_actions if probas[0][a] == max_proba]
-        return np.random.choice(max_q_actions)
+        scores = self.model.predict(state)
+        max_score = max(np.take(scores[0], allowed_actions))
+        best_actions = [a for a in allowed_actions if scores[0][a] == max_score]
+        if not best_actions:
+            print(state, scores, max_score, best_actions)
+        return np.random.choice(best_actions)
 
-    # def updateQ(self, state, reward, action, next_state, done, allowed_actions):
-    #     """ Update the Q matrix """
-    #     self.remember(state, action, reward, next_state, done)
-    #     max_next_q = max(self.Q[next_state, a] for a in allowed_actions)
-    #     self.Q[state, action] += self.alpha * (reward + self.gamma * max_next_q * (1 - done) - self.Q[state, action])
-
-    def remember(self, state, reward, action, next_state, done): 
+    def remember(self, state, reward, action, next_state, done, allowed_actions): 
         state = np.reshape(state, [1, len(state)]) 
-        next_state = np.reshape(next_state, [1, len(next_state)])
-        self.memory.append((state, action, reward, next_state, done))
+        next_state = np.reshape(next_state, [1,  len(next_state)])
+        self.memory.append((state, action, reward, next_state, done, allowed_actions))
     
     def inherit(self):
         return Agent(self.model, self.epsilon, self.alpha, self.gamma, self.learning_rate)
 
     def replay(self, batch_size):
-        if len(self.memory) > batch_size:
-            minibatch = random.sample(self.memory, batch_size)
-            for state, action, reward, next_state, done in minibatch:
+        size = len(self.memory)
+        for i in range(int(np.ceil(size / batch_size))):
+            temp_model = clone_model(self.model)
+            for state, action, reward, next_state, done, allowed_actions in \
+                self.memory[i * batch_size: min((i + 1) * batch_size, size)]:
+                      
                 target = reward
                 if not done:
-                    target = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
-                target_f = self.model.predict(state)
+                    target = reward + (1 - done) *  self.gamma * np.amax(np.take(temp_model.predict(next_state)[0], allowed_actions))
+                target_f = temp_model.predict(state)
                 target_f[0][action] = target
                 self.model.fit(state, target_f, epochs=1, verbose=0)
