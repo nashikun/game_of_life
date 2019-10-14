@@ -1,5 +1,5 @@
 from Player import Player
-from Agent import Agent
+from NaiveQAgent import NaiveQAgent
 import time
 from tkinter import Tk, Canvas
 import pickle
@@ -61,8 +61,8 @@ class Game:
             if self.show:
                 self.draw()
                 time.sleep(0.1)
-        for player in self.players.values():
-            player.agent.replay(self.batch_size)
+        # for player in self.players.values():
+        #     player.agent.replay(self.batch_size)
         if self.show:
             self.animation.destroy()
         # The total score is the sum of the rewards for all players

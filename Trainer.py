@@ -1,12 +1,15 @@
 from Game import Game
-from Agent import Agent
+from NaiveQAgent import NaiveQAgent
+from DQNAgent import DQNAgent
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path
+import pickle
 import keras.models
 from keras.layers import Dense, LSTM
 from keras.models import Sequential
 from keras.optimizers import Adam
+from collections import defaultdict
 
 # The possible actions
 moves = {0 : 'rest', 1 : 'eat', 2 : 'hunt', 3 : 'reproduce'}
@@ -15,49 +18,65 @@ n_moves = len(moves.keys())
 n_stats = len(stats.keys())
 
 class Trainer:
-    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.0001):
+    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.0001, mode = "naive"):
         # Parameters for the Q learning
         self.epsilon = epsilon
         self.gamma = gamma
         self.alpha = alpha
         self.learning_rate = learning_rate
-        self.model = self.build_model()
+        self.mode = mode
+        if mode == "dqn":
+            self.model = self.build_model()
+        elif mode == "naive":
+            self.model = defaultdict(float)
         # Holds the scores of each played game        
         self.scores = []
 
     def build_model(self):
         model = Sequential()
         # model.add(LSTM(units = 16, batch_input_shape=(1, 1, n_states) ,stateful=True))
-        model.add(Dense(64, input_shape = (n_stats,), activation='relu', kernel_initializer='random_uniform'))
-        model.add(Dense(32, activation='relu', kernel_initializer='random_uniform'))
-        model.add(Dense(16, activation='relu', kernel_initializer='random_uniform'))
+        model.add(Dense(4, input_shape = (n_stats,), activation='sigmoid', kernel_initializer='random_uniform'))
+        # model.add(Dense(4, activation='relu', kernel_initializer='random_uniform'))
         model.add(Dense(n_moves, kernel_initializer='random_uniform'))
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
 
     def load_model(self, filename):
         if os.path.isfile(filename):
-            self.model = keras.models.load_model(filename)
+            if self.mode == "naive":
+                with open(filename, 'rb') as handle:
+                    self.model = pickle.load(handle)
+            elif self.mode == "dqn":
+                self.model = keras.models.load_model(filename)
 
     def save_model(self, filename):
-        self.model.save(filename)
+        if self.mode == "naive":
+                with open(filename, 'wb') as handle:
+                    pickle.dump(self.model, handle)
+        elif self.mode == "dqn":
+            self.model.save(filename)
         
-    def train(self, show = True, print_scores = True, n_generations = 100):
+    def train(self, show = True, print_scores = True, n_generations = 100, update_epsilon = True):
         self.n_generations = n_generations
         for i in range(n_generations):
-            game = Game(show = show, max_value=30, batch_size=32)
+            game = Game(show = show, max_value=30, batch_size=16)
             game.add_player(0)
-            game.players[0].set_agent(Agent(self.model, self.epsilon, self.alpha, self.gamma, self.learning_rate))
+            if self.mode == "naive":
+                agent = NaiveQAgent(self.model, self.epsilon, self.alpha, self.gamma)
+            elif self.mode == "dqn":
+                agent = DQNAgent(self.model, self.epsilon, self.alpha, self.gamma)
+            game.players[0].set_agent(agent)
             game.players[0].age = 20
             score = game.run()
-            self.updateEpsilon()
+            if update_epsilon:
+                self.updateEpsilon()
             if print_scores:
                 print("Score at the %s-th iteration :  %s"%(i, score))
             else:
                 if not i % 50:
                     print("%s-th iterations"%i)
             self.scores.append(score)
-
+    # Add a policy class. Greedy, epsilon greedy, constant, linear
     def updateEpsilon(self):
         self.epsilon -= 1/self.n_generations
 
@@ -70,18 +89,23 @@ class Trainer:
         plt.waitforbuttonpress()
 
 def run_demo(path):
-    trainer = Trainer(epsilon=0)
+    ext = path.split(".")[-1]
+    if ext == "h5":
+        mode = "dqn"
+    elif ext == "q":
+        mode = "naive"
+    trainer = Trainer(epsilon=0, mode = mode)
     trainer.load_model(path)
     trainer.train(show=True, print_scores=True, n_generations=1)
 
-def train_model(path, n_generations=1000, window=50, read = True):
-    trainer = Trainer(epsilon=1)
+def train_model(path, epsilon=1, n_generations=1000, window=50, read = True, update_epsilon = True, mode = "naive"):
+    trainer = Trainer(epsilon=epsilon, mode = mode)
     if read:
         trainer.load_model(path)
-    trainer.train(show=False, print_scores=False, n_generations=n_generations)
+    trainer.train(show=False, print_scores=False, n_generations=n_generations, update_epsilon=update_epsilon)
     trainer.plot_scores(window)
     trainer.save_model(path)
 
 if __name__ == "__main__":
-    #run_demo("3")
-    train_model("3", read = False)
+    train_model("weigths.q", epsilon = 1.0, read = True, update_epsilon = True, n_generations=1000, window = 50, mode = "naive")
+    run_demo("weigths.q")

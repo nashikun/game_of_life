@@ -131,7 +131,7 @@ class Player:
             if self.until_birth == 1:
                 self.game.add_new_born(self)
             # The current state
-            state = [self.stamina, self.hunger, self.food, self.until_birth, n_children]
+            state = (self.stamina, self.hunger, self.food, self.until_birth, n_children)
             # The best expected action
             action = self.agent.act(state, allowed_actions)
             # Do the action
@@ -139,7 +139,7 @@ class Player:
             done = self.game.is_over()
             reward = self.game.reward(next_state)
             # Update the game state
-            self.agent.remember(state, reward, action, next_state, done, allowed_actions)
+            self.agent.update(state, reward, action, next_state, done, allowed_actions)
             self.stamina, self.hunger, self.food, self.until_birth, _ = next_state
             self.age += 1
             self.reward += reward
