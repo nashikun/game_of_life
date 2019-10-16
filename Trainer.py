@@ -18,7 +18,7 @@ n_moves = len(moves.keys())
 n_stats = len(stats.keys())
 
 class Trainer:
-    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.0001, mode = "naive"):
+    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.5, mode = "naive"):
         # Parameters for the Q learning
         self.epsilon = epsilon
         self.gamma = gamma
@@ -35,8 +35,7 @@ class Trainer:
     def build_model(self):
         model = Sequential()
         # model.add(LSTM(units = 16, batch_input_shape=(1, 1, n_states) ,stateful=True))
-        model.add(Dense(4, input_shape = (n_stats,), activation='sigmoid', kernel_initializer='random_uniform'))
-        # model.add(Dense(4, activation='relu', kernel_initializer='random_uniform'))
+        model.add(Dense(4, input_shape = (n_stats,), activation='relu', kernel_initializer='random_uniform'))
         model.add(Dense(n_moves, kernel_initializer='random_uniform'))
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
@@ -107,5 +106,5 @@ def train_model(path, epsilon=1, n_generations=1000, window=50, read = True, upd
     trainer.save_model(path)
 
 if __name__ == "__main__":
-    train_model("weigths.q", epsilon = 1.0, read = True, update_epsilon = True, n_generations=1000, window = 50, mode = "naive")
-    run_demo("weigths.q")
+    train_model("weigths.h5", epsilon = 1.0, read = False, update_epsilon = True, n_generations=1000, window = 50, mode = "dqn")
+    #run_demo("weigths.h5")

@@ -1,6 +1,7 @@
 from Agent import Agent
 import numpy as np
 import random
+from collections import deque
 from keras.models import clone_model
 
 """ The Class responsible for making decisions """
@@ -22,19 +23,15 @@ class DQNAgent(Agent):
         # Updates the memory
         state = np.reshape(state, [1, len(state)]) 
         next_state = np.reshape(next_state, [1,  len(next_state)])
-        self.memory.append((state, action, reward, next_state, done, allowed_actions))
-    
-    def inherit(self):
-        return DQNAgent(self.model, self.epsilon, self.gamma)
+        self.memory.append((state, reward, action, next_state, done, allowed_actions))
 
     def replay(self, batch_size):
-        if len(self.memory) >= batch_size:
-            temp_model = clone_model(self.model)
-            for state, action, reward, next_state, done, allowed_actions in \
-                random.sample(self.memory, batch_size):
-                #self.memory[i * batch_size: min((i + 1) * batch_size, size)]:
-                
-                target = reward + (1 - done) *  self.gamma * np.amax(np.take(temp_model.predict(next_state)[0], allowed_actions))
-                target_f = self.model.predict(state)
-                target_f[0][action] = target
-                self.model.fit(state, target_f, epochs=1, verbose=0)
+        temp_model = clone_model(self.model)
+        for state, reward, action, next_state, done, allowed_actions in self.memory:
+            #self.memory[i * batch_size: min((i + 1) * batch_size, size)]:
+
+            target = reward + (1 - done) *  self.gamma * np.amax(np.take(temp_model.predict(next_state)[0], allowed_actions))
+            target_f = self.model.predict(state)
+            target_f[0][action] = target
+            self.model.fit(state, target_f, epochs=1, verbose=0)
+        self.memory = deque(maxlen=1000)

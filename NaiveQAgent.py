@@ -16,6 +16,3 @@ class NaiveQAgent(Agent):
     def update(self, state, reward, action, next_state, done, allowed_actions):
         max_next_q = max(self.model[next_state, a] for a in allowed_actions)
         self.model[state, action] += self.alpha * (reward + self.gamma * max_next_q * (1 - done) - self.model[state, action])
-
-    def inherit(self):
-        return NaiveQAgent(self.model, self.epsilon, self.gamma, self.alpha)

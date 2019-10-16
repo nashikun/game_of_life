@@ -10,14 +10,21 @@ class Agent:
         self.gamma = gamma
         # The number of turns since the start of the game
         self.count = 0
-        # Holds memory
-        self.memory = deque(maxlen=1000)
+        if self.__module__ != "NaiveDAgent":
+            # Holds memory
+            self.memory = deque(maxlen=1000)
 
     def act(self, state, allowed_actions):
-        return 0
+        pass
 
     def update(self, state, reward, action, next_state, done, allowed_actions):
         pass
 
     def inherit(self):
-        Agent(self.model, self.epsilon, self.gamma, self.alpha)
+        if self.alpha:
+            return self.__class__(self.model, self.epsilon, self.gamma, self.alpha)
+        else:
+            return self.__class__(self.model, self.epsilon, self.gamma)
+
+    def replay(self, batch_size):
+        pass
