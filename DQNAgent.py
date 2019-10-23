@@ -27,11 +27,15 @@ class DQNAgent(Agent):
 
     def replay(self, batch_size):
         temp_model = clone_model(self.model)
+        X = np.zeros((len(self.memory), 5))
+        y = np.zeros((len(self.memory), 3))
+        count = 0
         for state, reward, action, next_state, done, allowed_actions in self.memory:
             #self.memory[i * batch_size: min((i + 1) * batch_size, size)]:
-
+            X[count] = state
             target = reward + (1 - done) *  self.gamma * np.amax(np.take(temp_model.predict(next_state)[0], allowed_actions))
             target_f = self.model.predict(state)
             target_f[0][action] = target
-            self.model.fit(state, target_f, epochs=1, verbose=0)
+            y[count] = target_f
+        self.model.fit(state, target_f, epochs=5, verbose=0)
         self.memory = deque(maxlen=1000)

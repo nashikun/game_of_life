@@ -6,7 +6,7 @@ import numpy as np
 import os.path
 import pickle
 import keras.models
-from keras.layers import Dense, LSTM
+from keras.layers import Dense, LSTM, Activation, BatchNormalization
 from keras.models import Sequential
 from keras.optimizers import Adam
 from collections import defaultdict
@@ -18,7 +18,7 @@ n_moves = len(moves.keys())
 n_stats = len(stats.keys())
 
 class Trainer:
-    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.5, mode = "naive"):
+    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.1, mode = "naive"):
         # Parameters for the Q learning
         self.epsilon = epsilon
         self.gamma = gamma
@@ -35,7 +35,21 @@ class Trainer:
     def build_model(self):
         model = Sequential()
         # model.add(LSTM(units = 16, batch_input_shape=(1, 1, n_states) ,stateful=True))
-        model.add(Dense(4, input_shape = (n_stats,), activation='relu', kernel_initializer='random_uniform'))
+        model.add(Dense(15, input_shape = (n_stats,), kernel_initializer='random_uniform'))
+        model.add(BatchNormalization())
+
+        model.add(Dense(15, kernel_initializer='random_uniform'))
+        model.add(BatchNormalization())
+        model.add(Activation('elu'))
+
+        model.add(Dense(10, kernel_initializer='random_uniform'))
+        model.add(BatchNormalization())
+        model.add(Activation('elu'))
+
+        model.add(Dense(10, kernel_initializer='random_uniform'))
+        model.add(BatchNormalization())
+        model.add(Activation('elu'))
+
         model.add(Dense(n_moves, kernel_initializer='random_uniform'))
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
@@ -55,9 +69,9 @@ class Trainer:
         elif self.mode == "dqn":
             self.model.save(filename)
         
-    def train(self, show = True, print_scores = True, n_generations = 100, update_epsilon = True):
+    def train(self, show = True, print_scores = True, n_generations = 100, update_epsilon = True, model_path =''):
         self.n_generations = n_generations
-        for i in range(n_generations):
+        for i in range(1, n_generations + 1):
             game = Game(show = show, max_value=30, batch_size=16)
             game.add_player(0)
             if self.mode == "naive":
@@ -74,6 +88,8 @@ class Trainer:
             else:
                 if not i % 50:
                     print("%s-th iterations"%i)
+            if model_path and not i%50:
+                self.save_model(model_path)
             self.scores.append(score)
     # Add a policy class. Greedy, epsilon greedy, constant, linear
     def updateEpsilon(self):
@@ -97,14 +113,14 @@ def run_demo(path):
     trainer.load_model(path)
     trainer.train(show=True, print_scores=True, n_generations=1)
 
-def train_model(path, epsilon=1, n_generations=1000, window=50, read = True, update_epsilon = True, mode = "naive"):
+def train_model(model_path, epsilon=1, n_generations=1000, window=50, read = True, update_epsilon = True, mode = "naive"):
     trainer = Trainer(epsilon=epsilon, mode = mode)
     if read:
-        trainer.load_model(path)
-    trainer.train(show=False, print_scores=False, n_generations=n_generations, update_epsilon=update_epsilon)
+        trainer.load_model(model_path)
+        print("Model loaded")
+    trainer.train(show=False, print_scores=False, n_generations=n_generations, update_epsilon=update_epsilon, model_path=model_path)
     trainer.plot_scores(window)
-    trainer.save_model(path)
 
 if __name__ == "__main__":
-    train_model("weigths.h5", epsilon = 1.0, read = False, update_epsilon = True, n_generations=1000, window = 50, mode = "dqn")
+    train_model("reward.h5", epsilon = 1.0, read = True, update_epsilon = True, n_generations=2000, window = 100, mode = "dqn")
     #run_demo("weigths.h5")
