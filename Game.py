@@ -1,8 +1,9 @@
-from Player import Player
+from Human import Human
 from NaiveQAgent import NaiveQAgent
 import time
 from tkinter import Tk, Canvas
 import pickle
+import random
 
 class Game:
     """ This class contains a single game, the players and resources"""
@@ -25,22 +26,25 @@ class Game:
         self.players = {}
         self.new_borns = {}
 
-    def add_player(self, id=None):
+    def add_player(self, id=None, random_state=False):
         """ Adds a player to the game with the corresponding id. No 2 players can have the same id"""
         if id:
             if id in self.players.keys():
                 raise Exception(('Id already exists'))
-            self.players[id] = Player(self, id=id)
+            the_id = id
         else:
-            new_id = max(self.players.keys(), default = -1) + 1
-            self.players[new_id] = Player(self, id=new_id)
+            the_id = max(self.players.keys(), default = -1) + 1
+        self.players[the_id] = Human(self, id=the_id)
+        if random_state:
+            self.players[the_id].stamina = random.randint(0, self.max_value)
+            self.players[the_id].hunger = random.randint(0, self.max_value)
     
     def add_new_born(self, parent):
         """ Adds a player as some player's child"""
         # The list of all used ids
         keys = set(self.players.keys()) | set(self.new_borns.keys())
         new_id = max(keys, default = -1) + 1
-        player = Player(self, id = new_id, parent = parent)
+        player = Human(self, id = new_id, parent = parent)
         player.set_agent(parent.agent.inherit())
         parent.children.append(player)
         # New_borns is a temporary dict holding new born players,

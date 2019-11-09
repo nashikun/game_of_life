@@ -74,57 +74,11 @@ class Player:
 
     def next_turn(self, action):
         """ Return the next state of player if he did the action in this turn """
-        if action == 0: # Rest
-            if self.until_birth:
-                stamina = min(self.stamina + 2, self.max_value)
-                hunger = min(2 + self.hunger, self.max_value)
-                food = self.food
-                until_birth = max(self.until_birth - 1, 0)
-            else:
-                stamina = min(self.stamina + 4, self.max_value)
-                hunger = min(1 + self.hunger, self.max_value)
-                food = self.food
-                until_birth = max(self.until_birth - 1, 0)
-        elif action == 1 : #Eat
-            if self.until_birth:
-                stamina = self.stamina
-                hunger = max(self.hunger - 3, 0)
-                food = max(self.food - 2, 0)
-                until_birth = max(self.until_birth - 1, 0)
-            else:
-                stamina = self.stamina
-                hunger = max(self.hunger - 3, 0)
-                food = max(self.food - 1, 0)
-                until_birth = max(self.until_birth - 1, 0)
-        elif action == 2 : # Hunt
-            if self.until_birth:
-                food = self.food + 2
-                hunger = min(self.hunger + 3, self.max_value)
-                stamina = max(self.stamina - 4, 0)
-                until_birth = max(self.until_birth - 1, 0)
-            else:
-                food = self.food + 2
-                hunger = min(self.hunger + 2, self.max_value)
-                stamina = max(self.stamina - 2, 0)
-                until_birth = max(self.until_birth - 1, 0)
-        elif action == 3: # Reproduce
-            if self.until_birth:
-                raise Exception("Unallowed action")
-            else: 
-                stamina = self.stamina
-                hunger = self.hunger + 2
-                food = self.food
-                until_birth = 10
-        n_children = self.n_children()
-        if self.until_birth == 1:
-            n_children += 1
-        return stamina, hunger, food, until_birth, n_children
+        return self.stamina, self.hunger, self.food, self.until_birth, self.n_children()
 
     def play_turn(self):
         """ Plays 1 turn for the player and updates his status accordingly"""
         if not self.is_dead():
-            # The allowed actions:
-            allowed_actions = self.allowed_actions()
             # The number of alive children
             n_children = self.n_children()
             # If birth is due this turn, give birth
@@ -133,31 +87,20 @@ class Player:
             # The current state
             state = (self.stamina, self.hunger, self.food, self.until_birth, n_children)
             # The best expected action
-            action = self.agent.act(state, allowed_actions)
+            action = self.agent.act(state)
             # Do the action
             next_state = self.next_turn(action)
             done = self.game.is_over()
             reward = self.game.reward(next_state)
             # Update the game state
-            self.agent.update(state, reward, action, next_state, done, allowed_actions)
+            self.agent.update(state, reward, action, next_state, done)
             self.stamina, self.hunger, self.food, self.until_birth, _ = next_state
             self.age += 1
             self.reward += reward
 
     def is_dead(self):
         """ Return True if the player is dead and False otherwise"""
-        return self.stamina <= 0 or self.hunger >= self.max_value or self.age >= 100
-
-    def allowed_actions(self):
-        """ Returns the list of allowed moves the user can do """
-        allowed = [0]
-        if self.food : 
-            allowed.append(1)
-        #if self.age > 20:
-        allowed.append(2)
-            # if not self.until_birth :
-            #     allowed.append(3)
-        return allowed
+        return False
 
     def n_children(self):
         return len([child for child in self.children if not child.is_dead()])

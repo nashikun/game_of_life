@@ -12,13 +12,13 @@ from keras.optimizers import Adam
 from collections import defaultdict
 
 # The possible actions
-moves = {0 : 'rest', 1 : 'eat', 2 : 'hunt', 3 : 'reproduce'}
+moves = {0 : 'rest', 1 : 'eat', 2 : 'hunt'} #, 3 : 'reproduce'}
 stats = {0 : 'stamina', 1 : 'hunger', 2 : 'food', 3 : 'until_birth', 4 : 'n_children'}
 n_moves = len(moves.keys())
-n_stats = len(stats.keys())
+n_states = len(stats.keys())
 
 class Trainer:
-    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.1, mode = "naive"):
+    def __init__(self, epsilon = 1, gamma = 0.99, alpha = 0.5, learning_rate=0.01, mode = "naive"):
         # Parameters for the Q learning
         self.epsilon = epsilon
         self.gamma = gamma
@@ -35,22 +35,19 @@ class Trainer:
     def build_model(self):
         model = Sequential()
         # model.add(LSTM(units = 16, batch_input_shape=(1, 1, n_states) ,stateful=True))
-        model.add(Dense(15, input_shape = (n_stats,), kernel_initializer='random_uniform'))
+        model.add(Dense(15, input_shape = (n_states,), kernel_initializer='random_uniform'))
         model.add(BatchNormalization())
+        model.add(Activation('relu'))
 
-        model.add(Dense(15, kernel_initializer='random_uniform'))
+        model.add(Dense(8, kernel_initializer='glorot_uniform'))
         model.add(BatchNormalization())
-        model.add(Activation('elu'))
+        model.add(Activation('relu'))
 
-        model.add(Dense(10, kernel_initializer='random_uniform'))
+        model.add(Dense(4, kernel_initializer='glorot_uniform'))
         model.add(BatchNormalization())
-        model.add(Activation('elu'))
+        model.add(Activation('relu'))
 
-        model.add(Dense(10, kernel_initializer='random_uniform'))
-        model.add(BatchNormalization())
-        model.add(Activation('elu'))
-
-        model.add(Dense(n_moves, kernel_initializer='random_uniform'))
+        model.add(Dense(n_moves, kernel_initializer='glorot_uniform'))
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
 
@@ -69,15 +66,19 @@ class Trainer:
         elif self.mode == "dqn":
             self.model.save(filename)
         
-    def train(self, show = True, print_scores = True, n_generations = 100, update_epsilon = True, model_path =''):
+    def train(self, show = True, print_scores = True, n_generations = 100, update_epsilon = True, model_path ='', random_state=False, max_value = 30):
         self.n_generations = n_generations
         for i in range(1, n_generations + 1):
-            game = Game(show = show, max_value=30, batch_size=16)
-            game.add_player(0)
+            game = Game(show = show, max_value=max_value, batch_size=16)
+            game.add_player(0, random_state=random_state)
             if self.mode == "naive":
-                agent = NaiveQAgent(self.model, self.epsilon, self.alpha, self.gamma)
+                agent = NaiveQAgent(n_moves, n_states, self.model, self.epsilon, self.alpha, self.gamma)
             elif self.mode == "dqn":
-                agent = DQNAgent(self.model, self.epsilon, self.alpha, self.gamma)
+                agent = DQNAgent(n_moves, n_states, self.model, self.epsilon, self.alpha, self.gamma)
+            else:
+                print("Invalide mode")
+                return
+            agent.max_value = max_value
             game.players[0].set_agent(agent)
             game.players[0].age = 20
             score = game.run()
@@ -103,7 +104,7 @@ class Trainer:
         plt.plot(points, means)
         plt.waitforbuttonpress()
 
-def run_demo(path):
+def run_demo(path, random_state = False):
     ext = path.split(".")[-1]
     if ext == "h5":
         mode = "dqn"
@@ -111,16 +112,16 @@ def run_demo(path):
         mode = "naive"
     trainer = Trainer(epsilon=0, mode = mode)
     trainer.load_model(path)
-    trainer.train(show=True, print_scores=True, n_generations=1)
+    trainer.train(show=True, print_scores=True, n_generations=1, random_state=random_state)
 
-def train_model(model_path, epsilon=1, n_generations=1000, window=50, read = True, update_epsilon = True, mode = "naive"):
+def train_model(model_path, epsilon=1, n_generations=1000, window=50, read = True, update_epsilon = True, mode = "naive", random_state=False):
     trainer = Trainer(epsilon=epsilon, mode = mode)
     if read:
         trainer.load_model(model_path)
         print("Model loaded")
-    trainer.train(show=False, print_scores=False, n_generations=n_generations, update_epsilon=update_epsilon, model_path=model_path)
+    trainer.train(show=False, print_scores=False, n_generations=n_generations, update_epsilon=update_epsilon, model_path=model_path, random_state=random_state)
     trainer.plot_scores(window)
 
 if __name__ == "__main__":
-    train_model("reward.h5", epsilon = 1.0, read = True, update_epsilon = True, n_generations=2000, window = 100, mode = "dqn")
-    #run_demo("weigths.h5")
+   train_model("test.h5", epsilon = 1, read = False, update_epsilon = True, n_generations=1000, window = 50, mode = "dqn", random_state = False)
+   #run_demo("attempt.h5", random_state = False)
